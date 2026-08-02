@@ -8,6 +8,14 @@
                  [com.google.protobuf/protobuf-java "4.29.5"]
                  [com.github.javaparser/javaparser-core "3.25.10"]]
   :plugins [[lein-marginalia "0.9.1"]]
+  ;; resources/com/ib/** holds IB's own Java sources, kept locally so the mapping
+  ;; generator can parse them. They are GPLv3 as of 10.49 and must not be shipped
+  ;; in an EPL jar. .gitignore keeps them out of git; this keeps them out of the
+  ;; jar, which lein builds from :resource-paths and not from git.
+  ;; The generator reads them by filesystem path, never off the classpath.
+  ;; The EWrapper_*.java at the resources root are NOT excluded - wrapper.clj
+  ;; slurps the matching one off the classpath at load time.
+  :jar-exclusions [#"^com/"]
   :profiles {:dev {:dependencies [[twsapi "10.49.01"]
                                   [midje "1.10.9"]
                                   [criterium "0.4.6"]]

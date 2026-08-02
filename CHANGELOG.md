@@ -18,6 +18,9 @@ All notable changes to this project will be documented in this file. Note the un
 - `test/…/{translation,mapping,wrapper}.clj` dated from the pre-10.x API and no longer compiled or passed: they expected translation tables to yield strings rather than `Types$*` enums, set `m_`-prefixed public fields directly, imported the removed `CommissionReport`, and asserted the old nested `{:type … :value {…}}` wrapper messages.
 - They now cover what the library actually does, including the changes above: `$LEDGER-` keys, the absent fundamentals tables, `:settlement-method`, `->map` on the read-only callback classes, and the flat message shape the generated reification produces.
 - New `test/…/synchronous.clj` covers the timeout guard. No test needs a running TWS. Run them with `lein midje 'ib-re-actor-976-plus.test.*'` — 168 checks.
+### Packaging: IB's Java sources are no longer shipped in the jar
+- `resources/com/ib/**` is excluded from the jar via `:jar-exclusions`. `.gitignore` already kept these out of git, but lein builds the jar from `:resource-paths` and never consults `.gitignore`, so all 300 of them were being published - as they were in 0.2.10.46.01-SNAPSHOT. IB relicensed these sources to GPLv3 in 10.49, so shipping them from an EPL jar is now a license incompatibility.
+- Nothing needs them at runtime; the `EWrapper_*.java` at the resources root are still included, since `wrapper.clj` reads the matching one off the classpath. The jar goes from 1.4M to 120K.
 ### Mappings regenerated from the 10.49.01 sources in `resources/com/ib/client/`
 - `ContractDetails` gains `:settlement-method`.
 - `mapping_generator.clj` now parses at Java 17 language level — 10.49 sources use switch expressions, which silently broke parsing of `EClient.java`.
