@@ -7,7 +7,7 @@
   To regenerate, run: (require 'ib-re-actor-976-plus.mapping-generator)
                       (ib-re-actor-976-plus.mapping-generator/write-generated-mappings!)
 
-  Generated on: 2026-05-07T22:12:55.950936Z
+  Generated on: 2026-08-02T21:02:54.687872Z
 
   Usage:
     (require '[ib-re-actor-976-plus.mapping :refer [->map map->]])
@@ -140,7 +140,8 @@
             [:ineligibility-reason-list ineligibilityReasonList]
             [:event-contract1 eventContract1]
             [:event-contract-description1 eventContractDescription1]
-            [:event-contract-description2 eventContractDescription2])
+            [:event-contract-description2 eventContractDescription2]
+            [:settlement-method settlementMethod])
 
 
 (defmapping com.ib.client.DeltaNeutralContract

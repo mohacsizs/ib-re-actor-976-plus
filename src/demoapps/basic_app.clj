@@ -66,7 +66,7 @@
   (.reqHistoricalData
    (:ecs connection)
    (swap! requests inc)
-   ESH6-contract
+   ESZ6-contract
    "20251025 14:53:53 US/Central" ;the format is important. Having issues with US/Eastern
    "10 D"
    "1 day"

@@ -1,5 +1,26 @@
 # Changelog
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. Note the underlying changelog at https://ibkrguides.com/releasenotes/prod-2026.htm
+
+## [0.2.10.49.01] - 2026-08-03
+- Update Clojure and tools.logging to latest stable version
+- Update tws to 10.49.01. IB published no 10.49 release notes; diffing the jars against 10.46.01 shows the only API changes are the 10.47 fundamentals removal and a new `ContractDetails.settlementMethod` field (itself undocumented).
+### Breaking: fundamental data is de-supported by IB as of 10.47
+- Removed `request-fundamental-data` / `cancel-fundamental-data` from `gateway.clj` and `client_socket.clj` — the underlying `reqFundamentalData` / `cancelFundamentalData` no longer exist in the TWS API.
+- Removed tick type `:fundamental-ratios` (47) and generic tick `:fundamental-ratios` (258).
+- Removed the now-unreachable `report-type` and `fundamental-ratio` translation tables.
+### `$LEDGER-` prefix support (new API setting in 10.47)
+- TWS can now prepend `$LEDGER-` to per-currency account values (on by default for new users) so they can be told apart from account-level values of the same name.
+- `(translate :from-ib :account-value-key "$LEDGER-CashBalance")` returns `:ledger/cash-balance`; `numeric-account-value?`, `integer-account-value?` and `boolean-account-value?` accept both plain and `:ledger/` forms.
+### Synchronous calls no longer block forever
+- `synchronous/await-result` replaces the bare `@result` deref in all 13 synchronous functions: it throws immediately when the socket is down, and after `synchronous/*timeout-ms*` (default 30s, rebindable) when TWS accepts the request but never answers.
+- Previously any of these would park the calling thread for good. Loading `demoapps/synchronous_app.clj` without a gateway running hung a REPL - and hung bare `lein midje`, since that loads every namespace on the source path.
+### Tests rewritten against the current API
+- `test/…/{translation,mapping,wrapper}.clj` dated from the pre-10.x API and no longer compiled or passed: they expected translation tables to yield strings rather than `Types$*` enums, set `m_`-prefixed public fields directly, imported the removed `CommissionReport`, and asserted the old nested `{:type … :value {…}}` wrapper messages.
+- They now cover what the library actually does, including the changes above: `$LEDGER-` keys, the absent fundamentals tables, `:settlement-method`, `->map` on the read-only callback classes, and the flat message shape the generated reification produces.
+- New `test/…/synchronous.clj` covers the timeout guard. No test needs a running TWS. Run them with `lein midje 'ib-re-actor-976-plus.test.*'` — 168 checks.
+### Mappings regenerated from the 10.49.01 sources in `resources/com/ib/client/`
+- `ContractDetails` gains `:settlement-method`.
+- `mapping_generator.clj` now parses at Java 17 language level — 10.49 sources use switch expressions, which silently broke parsing of `EClient.java`.
 
 ## [0.2.10.46.01] - 2026-05-09
 ### Refactored mapping namespaces:

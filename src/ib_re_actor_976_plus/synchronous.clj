@@ -23,6 +23,27 @@
    [ib-re-actor-976-plus.gateway :as g]
    [ib-re-actor-976-plus.protobuf :as m]))
 
+(def ^:dynamic *timeout-ms*
+  "How long the functions in this namespace wait for TWS to answer before giving
+  up. Rebind it for requests that are legitimately slow:
+
+    (binding [*timeout-ms* 120000] (sync/historical-data conn ...))"
+  30000)
+
+(defn await-result
+  "Derefs the promise a synchronous request delivers into, without ever blocking
+  forever. Throws if the connection is down (TWS will never answer) or if it does
+  not answer within *timeout-ms*."
+  [connection result]
+  (when-not (g/is-connected? connection)
+    (throw (ex-info "Not connected to TWS - no response will ever arrive."
+                    {:type :not-connected})))
+  (let [v (deref result *timeout-ms* ::timeout)]
+    (if (= v ::timeout)
+      (throw (ex-info (str "TWS did not respond within " *timeout-ms* "ms.")
+                      {:type :timeout :timeout-ms *timeout-ms*}))
+      v)))
+
 (defn single-value-handlers
   "This returns a map of handlers suitable for calls that will provide a single
   response."
@@ -76,7 +97,7 @@
   (let [result (promise)]
     (g/request-current-time connection
                             (single-value-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn server-time-proto-buf
   "Returns the server time
@@ -85,7 +106,7 @@
   (let [result (promise)]
     (g/request-current-time-proto-buf connection
                                       (single-value-handlers-proto-buf result))
-    @result))
+    (await-result connection result)))
 
 (defn market-snapshot
   "Returns a snapshot of the market for the specified contract."
@@ -96,7 +117,7 @@
                   :error #(reset! data %)
                   :end #(deliver result @data)}]
     (g/request-market-data connection contract nil true handlers)
-    @result))
+    (await-result connection result)))
 
 (defn implied-vol
   "Returns detailed information about an option contract based on its price
@@ -105,7 +126,7 @@
   (let [result (promise)]
     (g/calculate-implied-vol connection contract option-price underlying-price
                              (single-value-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn option-price
   "Returns detailed information about an option contract based on its volatility
@@ -114,7 +135,7 @@
   (let [result (promise)]
     (g/calculate-option-price connection contract option-price underlying-price
                               (single-value-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn execute-order
   "Executes an order, returning only when the order is filled or canceled."
@@ -122,7 +143,7 @@
   (let [result (promise)]
     (g/place-and-monitor-order connection contract order
                                (resetting-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn open-orders
   "Returns open orders"
@@ -130,7 +151,7 @@
   (let [result (promise)]
     (g/request-open-orders connection
                            (conjing-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn positions
   "Return account positions
@@ -138,7 +159,7 @@
   [connection]
   (let [result (promise)]
     (g/request-positions connection (conjing-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn positions-proto-buf
   "Return account positions
@@ -146,7 +167,7 @@
   [connection]
   (let [result (promise)]
     (g/request-positions-proto-buf connection (conjing-handlers-proto-buf result))
-    @result))
+    (await-result connection result)))
 
 (defn contract-details
   "Gets details for the specified contract.
@@ -156,7 +177,7 @@
   [connection contract]
   (let [result (promise)]
     (g/request-contract-details connection contract (conjing-handlers result))
-    @result))
+    (await-result connection result)))
 
 (defn contract-details-proto-buf
   "Gets details for the specified contract.
@@ -166,7 +187,7 @@
   [connection contract]
   (let [result (promise)]
     (g/request-contract-details-proto-buf connection contract (conjing-handlers-proto-buf result))
-    @result))
+    (await-result connection result)))
 
 (defn scanner-subscription
   "Returns scanner results for the given subscription criteria.
@@ -185,7 +206,7 @@
   ([connection subscription filter-options]
    (let [result (promise)]
      (g/request-scanner-subscription connection subscription filter-options (conjing-handlers result))
-     @result)))
+     (await-result connection result))))
 
 (defn historical-data
   "Gets historical price bars for a contract."
@@ -196,7 +217,7 @@
                                 duration duration-unit bar-size bar-size-unit
                                 what-to-show use-regular-trading-hours?
                                 (conjing-handlers result))
-     @result))
+     (await-result connection result)))
   ([connection contract end
     duration duration-unit bar-size bar-size-unit]
    (historical-data connection contract end duration duration-unit

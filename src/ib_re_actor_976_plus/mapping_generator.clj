@@ -14,10 +14,13 @@
    [clojure.string :as str]
    [clojure.pprint :refer [pprint]])
   (:import
-   (com.github.javaparser StaticJavaParser)
+   (com.github.javaparser StaticJavaParser ParserConfiguration$LanguageLevel)
    (com.github.javaparser.ast.body ClassOrInterfaceDeclaration FieldDeclaration MethodDeclaration)
    (com.github.javaparser.ast.type PrimitiveType ClassOrInterfaceType)
    (java.io File)))
+
+; IB sources use switch expressions (EClient.java), which need a modern language level.
+(.setLanguageLevel (StaticJavaParser/getParserConfiguration) ParserConfiguration$LanguageLevel/JAVA_17)
 
 (defn camel-to-kebab
   "Convert camelCase to kebab-case"

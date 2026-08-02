@@ -114,7 +114,6 @@
      :realtime-volume                RTVolume
      :shortable                      Shortable
      :inventory                      Inventory
-     :fundamental-ratios             Fundamental Ratios
      :realtime-historical-volatility Realtime Historical Volatility
 
      if no tick list is specified, a single snapshot of market data will come back
@@ -610,24 +609,6 @@
                        useRth
                        ignoreSize
                        nil))
-
-;;;
-;;; Fundamental Data
-;;;
-(defn request-fundamental-data
-  "Call this function to receive Reuters global fundamental data. There must be a
-   subscription to Reuters Fundamental set up in Account Management before you
-   can receive this data."
-  [ecs request-id contract report-type]
-  (.reqFundamentalData ecs request-id
-                       (map-> com.ib.client.Contract contract)
-                       (translate :to-ib :report-type report-type)
-                       nil))
-
-(defn cancel-fundamental-data
-  "Call this function to stop receiving Reuters global fundamental data."
-  [ecs request-id]
-  (.cancelFundamentalData ecs request-id))
 
 ;;;
 ;;; Display Groups

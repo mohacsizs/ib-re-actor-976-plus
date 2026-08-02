@@ -361,7 +361,6 @@ to check if if a given value is valid (known)."
                     :close-efp-computation        44
                     :last-timestamp               45
                     :shortable                    46
-                    :fundamental-ratios           47
                     :realtime-volume              48
                     :halted                       49
                     :bid-yield                    50
@@ -437,7 +436,6 @@ to check if if a given value is valid (known)."
                     :realtime-volume                233     ; :realtime-volume
                     :shortable                      236     ; :shortable
                     :inventory                      256     ;
-                    :fundamental-ratios             258     ; :fundamental-ratios
                     :realtime-historical-volatility 411     ; 58?
                     :short-term-volume              595
                     :odd-lots                       787})
@@ -461,56 +459,6 @@ to check if if a given value is valid (known)."
                :else %))
        (map str)
        (clojure.string/join ",")))
-
-(translation-table fundamental-ratio
-                   {:closing-price                      "NPRICE"
-                    :3-year-ttm-growth                  "Three_Year_TTM_Growth"
-                    :ttm-over-ttm                       "TTM_over_TTM"
-                    :12-month-high                      "NHIG"
-                    :12-month-low                       "NLOW"
-                    :pricing-date                       "PDATE"
-                    :10-day-average-volume              "VOL10DAVG"
-                    :market-cap                         "MKTCAP"
-                    :eps-exclusing-extraordinary-items  "TTMEPSXCLX"
-                    :eps-normalized                     "AEPSNORM"
-                    :revenue-per-share                  "TTMREVPS"
-                    :common-equity-book-value-per-share "QBVPS"
-                    :tangible-book-value-per-share      "QTANBVPS"
-                    :cash-per-share                     "QCSHPS"
-                    :cash-flow-per-share                "TTMCFSHR"
-                    :dividends-per-share                "TTMDIVSHR"
-                    :dividend-rate                      "IAD"
-                    :pe-excluding-extraordinary-items   "PEEXCLXOR"
-                    :pe-normalized                      "APENORM"
-                    :price-to-sales                     "TMPR2REV"
-                    :price-to-tangible-book             "PR2TANBK"
-                    :price-to-cash-flow-per-share       "TTMPRCFPS"
-                    :price-to-book                      "PRICE2BK"
-                    :current-ration                     "QCURRATIO"
-                    :quick-ratio                        "QQUICKRATI"
-                    :long-term-debt-to-equity           "QLTD2EQ"
-                    :total-debt-to-equity               "QTOTD2EQ"
-                    :payout-ratio                       "TTMPAYRAT"
-                    :revenue                            "TTMREV"
-                    :ebita                              "TTMEBITD"
-                    :ebt                                "TTMEBT"
-                    :niac                               "TTMNIAC"
-                    :ebt-normalized                     "AEBTNORM"
-                    :niac-normalized                    "ANIACNORM"
-                    :gross-margin                       "TTMGROSMGN"
-                    :net-profit-margin                  "TTMNPMGN"
-                    :operating-margin                   "TTMOPMGN"
-                    :pretax-margin                      "APTMGNPCT"
-                    :return-on-average-assets           "TTMROAPCT"
-                    :return-on-average-equity           "TTMROEPCT"
-                    :roi                                "TTMROIPCT"
-                    :revenue-change                     "REVCHNGYR"
-                    :revenue-change-ttm                 "TTMREVCHG"
-                    :revenue-growth                     "REVTRENDGR"
-                    :eps-change                         "EPSCHNGYR"
-                    :eps-change-ttm                     "TTMEPSCHG"
-                    :eps-growth                         "EPSTRENDGR"
-                    :dividend-growth                    "DIVGRPCT"})
 
 (translation-table account-value-key
                    {:account-code                                          "AccountCode"
@@ -678,6 +626,25 @@ to check if if a given value is valid (known)."
                     :warrants-value                                        "WarrantValue"
                     :what-if-portfolio-margin-enabled                      "WhatIfPMEnabled"})
 
+; TWS 10.47 added the API setting "Prepend '$LEDGER-' prefix to per-currency account values"
+; (on by default for new users). We keep the distinction by returning a :ledger/ namespaced
+; keyword, e.g. "$LEDGER-CashBalance" -> :ledger/cash-balance.
+(def ^:private account-value-key-from-ib
+  (zipmap (vals account-value-key) (keys account-value-key)))
+
+(defmethod translate [:from-ib :account-value-key] [_ _ val]
+  (when val
+    (if (and (string? val) (str/starts-with? val "$LEDGER-"))
+      (if-let [k (account-value-key-from-ib (subs val (count "$LEDGER-")))]
+        (keyword "ledger" (name k))
+        val)
+      (or (account-value-key-from-ib val) val))))
+
+(defn- base-account-value-key
+  "Drops any :ledger/ namespace so the predicates below work on both forms."
+  [key]
+  (if (keyword? key) (keyword (name key)) key))
+
 (defn numeric-account-value? [key]
   (contains? #{:accrued-cash :accrued-cash-commodities :accrued-cash-stock :accrued-cash-regulated
                :accrued-dividend :accrued-dividend-commodities :accrued-dividend-stock :accrued-dividend-regulated
@@ -721,14 +688,14 @@ to check if if a given value is valid (known)."
                :total-cash-value :total-cash-value-commodities :total-cash-value-stock :total-cash-value-regulated
                :total-debit-card-pending-charges :total-debit-card-pending-charges-commodities :total-debit-card-pending-charges-stock :total-debit-card-pending-charges-regulated
                :unaltered-initial-margin-requirement :unaltered-maintenance-margin-requirement
-               :unrealized-profit-loss :warrants-value} key))
+               :unrealized-profit-loss :warrants-value} (base-account-value-key key)))
 
 (defn integer-account-value? [key]
   (contains? #{:day-trades-remaining :day-trades-remaining-T+1 :day-trades-remaining-T+2
-               :day-trades-remaining-T+3 :day-trades-remaining-T+4} key))
+               :day-trades-remaining-T+3 :day-trades-remaining-T+4} (base-account-value-key key)))
 
 (defn boolean-account-value? [key]
-  (contains? #{:account-ready :profit-loss :what-if-portfolio-margin-enabled} key))
+  (contains? #{:account-ready :profit-loss :what-if-portfolio-margin-enabled} (base-account-value-key key)))
 
 (translation-table market-depth-row-operation
                    {:insert 0
@@ -738,15 +705,6 @@ to check if if a given value is valid (known)."
 (translation-table market-depth-side
                    {:ask 0
                     :bid 1})
-
-(translation-table report-type
-                   {:company-overview     "ReportSnapshot"
-                    :financial-summary    "ReportsFinSummary"
-                    :financial-ratios     "ReportRatios"
-                    :financial-statements "ReportsFinStatements"
-                    :analyst-estimates    "RESC"
-                    :company-calendar     "CalendarReport"
-                    :ownership            "ReportsOwnership"})
 
 (translation-table rule-80A
                    {:individual              "I"
