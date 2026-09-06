@@ -7,7 +7,7 @@
   To regenerate, run: (require 'ib-re-actor-976-plus.mapping-generator)
                       (ib-re-actor-976-plus.mapping-generator/write-generated-mappings!)
 
-  Generated on: 2026-08-02T21:02:54.687872Z
+  Generated on: 2026-09-01T20:58:10.398870Z
 
   Usage:
     (require '[ib-re-actor-976-plus.mapping :refer [->map map->]])
@@ -340,6 +340,7 @@
             [:conditions conditions]
             [:conditions-cancel-order conditionsCancelOrder]
             [:conditions-ignore-rth conditionsIgnoreRth]
+            [:conditions-include-overnight conditionsIncludeOvernight]
             [:model-code modelCode]
             [:ext-operator extOperator]
             [:soft-dollar-tier softDollarTier]

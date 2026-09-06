@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file. Note the underlying changelog at https://ibkrguides.com/releasenotes/prod-2026.htm
 
+## [0.3.10.50.01] - 2026-09-01
+### twsapi is now a normal dependency - no manual .m2 install
+- IB's `TwsApi.jar` is published to Clojars as `[net.clojars.alex314159/twsapi "10.50.01"]` and is a plain `:dependencies` entry, so `lein deps` fetches it. The hand-install into `~/.m2/repository/twsapi/twsapi/<version>/` is no longer needed.
+- `scripts/publish-twsapi.sh` builds and deploys that artifact from IB's `twsapi_macunix.<ver>.zip`: it stamps IB's `LICENSE`, `NOTICE` and `THIRD_PARTY_LICENSES/` into `META-INF/` and writes a pom depending on the `protobuf-java` version IB ships alongside. Version and protobuf version are both read out of the zip. See `scripts/PUBLISHING_TWSAPI.md`.
+- Dropped the explicit `[com.google.protobuf/protobuf-java "4.29.5"]`; it now comes in transitively from twsapi's pom, at the same version. `protobuf.clj` imports `com.google.protobuf` directly, so this is an undeclared direct dependency on purpose - Maven is nearest-wins, so pinning it here would override twsapi's and could silently hand IB's jar a protobuf it wasn't compiled against.
+- Minor version bumped to 0.3 for the changed coordinate. `translation/tws-version` still reads the version off the classpath entry and is unaffected by the new group id.
+### Update tws to 10.50.01
+- Per IB's release notes (2026-08-28) the only API change is a new `Order.conditionsIncludeOvernight` field, letting conditional orders evaluate their conditions during overnight sessions. `EWrapper` is unchanged from 10.49.01, so no new callbacks and no new read-only mappings.
+- Mappings regenerated from the 10.50.01 sources: `Order` gains `:conditions-include-overnight`.
+
 ## [0.2.10.49.01] - 2026-08-03
 - Update Clojure and tools.logging to latest stable version
 - Update tws to 10.49.01. IB published no 10.49 release notes; diffing the jars against 10.46.01 shows the only API changes are the 10.47 fundamentals removal and a new `ContractDetails.settlementMethod` field (itself undocumented).

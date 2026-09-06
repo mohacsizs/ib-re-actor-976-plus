@@ -16,3 +16,4 @@ pom.xml
 /.lein-repl-history
 CLAUDE.md
 resources/com/
+.DS_Store
